@@ -106,6 +106,81 @@ Every backend microservice is implemented in a distinct language to simulate a r
 
 ---
 
+## 📁 Project Folder Structure
+
+```text
+devops-shack-ai-fde-platform/
+├── .env.openai.example                 # Template for OpenAI API key and Chroma DB settings
+├── .gitignore                          # Comprehensive exclusions (secrets, sqlite, test caches)
+├── ARCHITECTURE.md                     # Deep-dive analysis of polyglot microservice communication
+├── PROJECT-STRUCTURE.txt               # Full file tree catalog
+├── README.md                           # Enterprise AI FDE case study & operations guide
+├── database/
+│   └── bootstrap.sql                   # Multi-database DDL/DML script (7 PostgreSQL schemas)
+├── docker-compose.yml                  # 11-service orchestration (Postgres, 7 APIs, Chroma, AI, UI)
+├── docs/
+│   └── API-EXAMPLES.md                 # cURL payload examples for all microservices
+├── frontend/                           # React 18 + Vite Single Page Application (:5173)
+│   ├── .dockerignore
+│   ├── Dockerfile                      # Multi-stage production build (Node -> Nginx Alpine)
+│   ├── nginx.conf                      # Nginx reverse proxy configuration
+│   ├── package.json
+│   ├── vite.config.js                  # Proxy routing for backend microservices
+│   ├── src/
+│   │   ├── AIWidget.css                # Floating AI Widget styles, animations, and badges
+│   │   ├── AIWidget.jsx                # Persistent slide-up AI drawer component
+│   │   ├── AssistantView.jsx           # 3-Tab AI Control Center (Assistant, Guardrails, Evals)
+│   │   ├── App.jsx                     # Core application router and layout
+│   │   ├── api.js                      # Unified HTTP API client
+│   │   ├── main.jsx
+│   │   └── styles.css
+│   └── index.html
+├── scripts/
+│   ├── health-check.sh                 # Unified curl health check script
+│   ├── start-all.sh                    # Host-level startup script without Docker
+│   └── stop-all.sh                     # Host-level shutdown script
+└── services/
+    ├── ai-assistant-service/           # 🤖 Python FastAPI AI Assistant Microservice (:8088)
+    │   ├── .dockerignore
+    │   ├── Dockerfile                  # Python 3.12-slim production container
+    │   ├── README.md                   # Dedicated AI Assistant documentation
+    │   ├── requirements.txt            # FastAPI, ChromaDB, OpenAI, Pydantic, Pytest
+    │   ├── app/
+    │   │   ├── assistant.py            # AI orchestrator (Guardrail pre-flight, RAG injection, Fallback)
+    │   │   ├── catalog_client.py       # Resilient HTTP client for Go Catalog API
+    │   │   ├── config.py               # Pydantic Settings (.env.openai loader)
+    │   │   ├── main.py                 # FastAPI app, CORS, lifespan, and REST endpoints
+    │   │   ├── pricing_engine.py       # Line-item arithmetic engine (volume tiers, promos)
+    │   │   ├── evals/                  # 📊 Automated Continuous Evaluations Engine
+    │   │   │   ├── dataset.py          # 16 Golden Benchmark Test Cases
+    │   │   │   ├── metrics.py          # Scoring algorithms (Faithfulness, Relevance, Pricing)
+    │   │   │   └── runner.py           # Benchmark suite runner and scorecard aggregator
+    │   │   ├── guardrails/             # 🛡️ Enterprise Security & Privacy Guardrails
+    │   │   │   ├── detector.py         # Injections, PII masks, Domain scope, Secret leaks
+    │   │   │   └── manager.py          # Pre-flight and post-flight guardrail pipeline
+    │   │   └── rag/                    # 📚 Chroma DB Vector RAG Subsystem
+    │   │       ├── chroma_client.py    # Chroma DB client (Docker HTTP :8000 / Persistent fallback)
+    │   │       ├── indexer.py          # Document vectorizer & startup knowledge indexer
+    │   │       ├── knowledge_base.py   # 17 Curated internal specs & architecture chunks
+    │   │       └── retriever.py        # Vector similarity search engine
+    │   ├── scripts/
+    │   │   └── verify_endpoints.py     # Automated HTTP endpoint verification script
+    │   └── tests/                      # Automated Pytest Suite (21 Tests, 100% Pass)
+    │       ├── test_assistant.py
+    │       ├── test_evals.py
+    │       ├── test_guardrails.py
+    │       └── test_rag.py
+    ├── analytics-service/              # PHP 8.2 Analytics Aggregator (:8087)
+    ├── auth-service/                   # Java 21 Spring Boot Auth & JWT Service (:8081)
+    ├── catalog-service/                # Go 1.22 Product Catalog Service (:8082)
+    ├── inventory-service/              # Node.js 20 Express Inventory Service (:8083)
+    ├── notification-service/           # Ruby 3.3 Sinatra Notification Service (:8086)
+    ├── order-service/                  # Python FastAPI Checkout Orchestrator (:8084)
+    └── payment-service/                # C# ASP.NET Core 8 Payment Gateway (:8085)
+```
+
+---
+
 ## 🔬 Deep Dive: The AI FDE Implementation
 
 ### Phase 1: Legacy Discovery & Problem Framing
@@ -249,26 +324,186 @@ The React frontend (`frontend/src/`) delivers dual access modalities for users a
 
 ---
 
-## 🚀 Quick Start Guide
+---
 
-### Option A: Run Entire Mesh with Docker Compose (Recommended)
+## 🐳 Complete Docker & Docker Compose Deployment Guide
 
-Start all 10 containers in detached mode:
+The platform is fully containerized using **Docker** and **Docker Compose**, orchestrating **11 interconnected services** over an isolated internal bridge network (`microservices-net`) with automated database schema provisioning.
 
+### 📦 Containers in the Mesh
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                         DOCKER COMPOSE MESH (microservices-net)                   │
+│                                                                                  │
+│   [postgres]               PostgreSQL 16 Alpine + 7 Auto-provisioned Schemas     │
+│   [auth-service]           Java 21 Spring Boot (:8081)                           │
+│   [catalog-service]        Go 1.22 (:8082)                                       │
+│   [inventory-service]      Node.js 20 Express (:8083)                            │
+│   [order-service]          Python FastAPI (:8084)                                │
+│   [payment-service]        C# ASP.NET Core 8 (:8085)                             │
+│   [notification-service]   Ruby 3.3 Sinatra (:8086)                              │
+│   [analytics-service]      PHP 8.2 (:8087)                                       │
+│   [chromadb]               Chroma DB Vector Store (:8000)                        │
+│   [ai-assistant-service]   Python 3.12 FastAPI + RAG + Guardrails (:8088)        │
+│   [frontend]               React 18 + Vite Production Nginx (:5173)              │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Step-by-Step Docker Compose Deployment
+
+#### Step 1: Verify Prerequisites
+Ensure Docker Engine and Docker Compose v2 are installed on your host:
+```bash
+docker --version         # Docker version 24.0.0 or higher
+docker compose version   # Docker Compose version v2.20.0 or higher
+```
+
+#### Step 2: Configure Environment
+Copy the example environment template to configure the AI Assistant and Chroma DB:
+```bash
+cp .env.openai.example .env.openai
+```
+> *(Optional)* Add your OpenAI API key in `.env.openai`. If omitted, the AI Assistant automatically runs in its deterministic local engine with Chroma DB vector retrieval.
+
+#### Step 3: Build & Launch All 11 Containers
+To build all Dockerfiles, provision PostgreSQL databases, index Chroma DB, and start all services in the background:
 ```bash
 docker compose up --build -d
 ```
 
-#### Application Endpoints:
-- **Commerce Web UI & AI Widget**: [http://localhost:5173](http://localhost:5173)
+#### Step 4: Verify Running Containers & Health
+Check that all 11 services are up and healthy:
+```bash
+docker compose ps
+```
+
+Expected output:
+```text
+NAME                     IMAGE                      STATUS                   PORTS
+microservices-postgres   postgres:16-alpine         Up (healthy)             0.0.0.0:5432->5432/tcp
+microservices-auth       auth-service               Up                       0.0.0.0:8081->8081/tcp
+microservices-catalog    catalog-service            Up                       0.0.0.0:8082->8082/tcp
+microservices-inventory  inventory-service          Up                       0.0.0.0:8083->8083/tcp
+microservices-order      order-service              Up                       0.0.0.0:8084->8084/tcp
+microservices-payment    payment-service            Up                       0.0.0.0:8085->8085/tcp
+microservices-notification notification-service     Up                       0.0.0.0:8086->8086/tcp
+microservices-analytics  analytics-service          Up                       0.0.0.0:8087->8087/tcp
+microservices-chromadb   chromadb/chroma:latest     Up                       0.0.0.0:8000->8000/tcp
+microservices-ai-assistant ai-assistant-service     Up                       0.0.0.0:8088->8088/tcp
+microservices-frontend   frontend                   Up                       0.0.0.0:5173->80/tcp
+```
+
+#### Step 5: Monitor Live Logs
+Tail logs from any specific microservice:
+```bash
+# Stream AI Assistant logs
+docker compose logs -f ai-assistant-service
+
+# Stream Chroma DB vector store logs
+docker compose logs -f chromadb
+
+# Stream Go Catalog logs
+docker compose logs -f catalog-service
+
+# Stream all services simultaneously
+docker compose logs -f
+```
+
+#### Step 6: Access Application Services
+Once running, navigate to the key platform interfaces:
+- **Commerce Web UI & Floating AI Widget**: [http://localhost:5173](http://localhost:5173)
 - **AI Assistant Control Center**: [http://localhost:5173/assistant](http://localhost:5173/assistant)
-- **AI Assistant Swagger Docs**: [http://localhost:8088/docs](http://localhost:8088/docs)
+- **AI Assistant OpenAPI Docs**: [http://localhost:8088/docs](http://localhost:8088/docs)
 - **Chroma DB Heartbeat**: [http://localhost:8000/api/v1/heartbeat](http://localhost:8000/api/v1/heartbeat)
 - **Order Service Swagger Docs**: [http://localhost:8084/docs](http://localhost:8084/docs)
 
+#### Step 7: Service Control (Restarting & Rebuilding Single Services)
+You can rebuild or restart any individual container without restarting the whole mesh:
+```bash
+# Rebuild only the AI Assistant service
+docker compose up -d --build ai-assistant-service
+
+# Rebuild only the React frontend
+docker compose up -d --build frontend
+
+# Restart Chroma DB
+docker compose restart chromadb
+```
+
+#### Step 8: Teardown & Clean Volume Reset
+```bash
+# Stop and remove all containers (preserves database volumes)
+docker compose down
+
+# Stop and completely wipe all database and vector store volumes for a fresh reset
+docker compose down -v
+```
+
 ---
 
-### Option B: Run Standalone for Development
+### Standalone Docker Build Commands (Individual Services)
+
+If you wish to build or run containers individually without Docker Compose:
+
+#### 1. Build and Run AI Assistant Service:
+```bash
+# Build container image
+docker build -t ai-assistant-service:latest ./services/ai-assistant-service
+
+# Run container standalone
+docker run -d \
+  --name ai-assistant \
+  -p 8088:8088 \
+  --env-file .env.openai \
+  ai-assistant-service:latest
+```
+
+#### 2. Run Chroma DB Vector Store:
+```bash
+docker run -d \
+  --name chromadb \
+  -p 8000:8000 \
+  -v chroma_data:/chroma/chroma \
+  chromadb/chroma:latest
+```
+
+#### 3. Build and Run React Frontend:
+```bash
+# Multi-stage production build (Node compile + Nginx Alpine)
+docker build -t polyglot-frontend:latest ./frontend
+
+# Run frontend container on port 5173
+docker run -d \
+  --name polyglot-frontend \
+  -p 5173:80 \
+  polyglot-frontend:latest
+```
+
+---
+
+### 🔧 Docker Troubleshooting & Healthcheck Tips
+
+1. **Port Conflicts**:
+   - If port `5432`, `8088`, or `5173` is in use by a host service, stop the local daemon or adjust the host port mapping in `docker-compose.yml` (e.g. `"5174:80"`).
+2. **PostgreSQL Startup Dependency**:
+   - Backend services utilize `depends_on: postgres: condition: service_healthy`. If backends pause on startup, PostgreSQL is running its `01-bootstrap.sql` script to create all 7 database schemas.
+3. **Inspect Docker Network Connectivity**:
+   ```bash
+   docker network inspect microservices-net
+   ```
+4. **Run In-Container Healthcheck Script**:
+   ```bash
+   bash scripts/health-check.sh
+   ```
+
+---
+
+## 💻 Local Development (Without Docker)
+
+For rapid local code development and testing without containers:
 
 #### 1. AI Assistant Service (Python FastAPI):
 ```bash
@@ -277,10 +512,10 @@ cd services/ai-assistant-service
 # Install dependencies
 pip install -r requirements.txt
 
-# Run all 21 automated tests
+# Run all 21 automated tests (100% pass)
 python -m pytest tests/ -v
 
-# Run verification script against running daemon
+# Run comprehensive endpoint verification script
 python scripts/verify_endpoints.py
 
 # Start FastAPI server with live reload
