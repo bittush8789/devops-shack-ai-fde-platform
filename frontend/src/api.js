@@ -6,6 +6,7 @@ export const URLs = {
   payments: "/api/payments",
   notifications: "/api/notifications",
   analytics: "/api/analytics",
+  assistant: "/api/assistant",
 };
 
 export async function request(url, options = {}) {

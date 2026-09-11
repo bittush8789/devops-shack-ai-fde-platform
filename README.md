@@ -1,6 +1,6 @@
-# DevOps Shack Polyglot Microservices Lab
+# DevOps Shack Polyglot Microservices & AI Assistant Platform
 
-A complete **7-microservice**, multi-language application that can be run either **with Docker Compose** (recommended) or locally without Docker.
+A complete **enterprise polyglot microservices platform** featuring **8 microservices** across 7 programming languages, **Chroma DB Vector Store (RAG)**, **Enterprise Guardrails**, an **Automated Evaluations (Evals) Suite**, and a modern **React + Vite** frontend.
 
 ## 🚀 Run with Docker Compose (Quick Start)
 
@@ -18,7 +18,8 @@ docker compose up -d --build
 
 ### Accessing the Application
 
-- **React Web UI**: [http://localhost:5173](http://localhost:5173)
+- **React Web UI**: [http://localhost:5173](http://localhost:5173) (includes floating AI Widget and AI Assistant dashboard)
+- **AI Assistant OpenAPI Docs**: [http://localhost:8088/docs](http://localhost:8088/docs)
 - **Order Service Swagger Docs**: [http://localhost:8084/docs](http://localhost:8084/docs)
 
 ### Individual Health Endpoints
@@ -30,6 +31,8 @@ docker compose up -d --build
 - **Payment Service** (.NET): [http://localhost:8085/health](http://localhost:8085/health)
 - **Notification Service** (Ruby): [http://localhost:8086/health](http://localhost:8086/health)
 - **Analytics Service** (PHP): [http://localhost:8087/health](http://localhost:8087/health)
+- **AI Assistant Service** (Python): [http://localhost:8088/health](http://localhost:8088/health)
+- **Chroma DB Vector Store**: [http://localhost:8000/api/v1/heartbeat](http://localhost:8000/api/v1/heartbeat)
 
 ### Stopping the Application
 
@@ -47,7 +50,7 @@ docker compose down -v
 
 ## Architecture
 
-| Port | Service | Language / Framework | Responsibility | PostgreSQL DB |
+| Port | Service | Language / Framework | Responsibility | Database / Storage |
 |---|---|---|---|---|
 | 8081 | Auth Service | Java 21 + Spring Boot | Register, login, session lookup | `auth_db` |
 | 8082 | Catalog Service | Go | Product CRUD, search, pricing | `catalog_db` |
@@ -56,7 +59,9 @@ docker compose down -v
 | 8085 | Payment Service | C# + ASP.NET Core | Capture/refund simulated payments | `payment_db` |
 | 8086 | Notification Service | Ruby + Sinatra | Notification inbox | `notification_db` |
 | 8087 | Analytics Service | PHP | Aggregate service APIs and save snapshots | `analytics_db` |
-| 5173 | Web UI | React + Vite | User interface | — |
+| 8000 | Chroma DB | Vector Database | Stores semantic embeddings for RAG | `chroma_data` |
+| 8088 | AI Assistant Service | Python + FastAPI + OpenAI + RAG | Product specs, quotes, discounts & architecture Q&A | Chroma DB + Catalog API |
+| 5173 | Web UI | React + Vite | Polyglot Commerce UI + AI Floating Widget | — |
 
 PostgreSQL is installed once locally, but every backend service owns a **different database**.
 
@@ -755,3 +760,62 @@ sudo -u postgres psql -c "DROP DATABASE IF EXISTS analytics_db;"
 
 sudo -u postgres psql -f database/bootstrap.sql
 ```
+
+---
+
+# 14. AI Assistant, RAG, Guardrails & Evals Subsystem
+
+The platform includes an enterprise-grade AI Assistant microservice located in `services/ai-assistant-service/` running on **FastAPI (:8088)**.
+
+### Subsystem Highlights:
+1. **RAG with Chroma DB (:8000)**:
+   - Indexes 17 internal knowledge documents (product hardware specifications, keyboard switch specs, microservices architecture, warranty and shipping policies).
+   - High-performance semantic vector similarity search using Cosine distance.
+   - Containerized Chroma DB vector store orchestrated via `docker-compose.yml` with persistent volume `chroma_data`.
+
+2. **Enterprise Guardrails**:
+   - **Prompt Injection Defense**: Intercepts instruction overrides, `DAN` persona jailbreaks, and system prompt extraction.
+   - **PII & Secret Redaction**: Automatically redacts credit cards (Visa/Mastercard/Amex), SSNs, JWT tokens, and OpenAI `sk-...` keys into safe tokens.
+   - **Domain Scope Enforcement**: Enforces strict boundaries to ecommerce products, hardware specs, order quotes, and platform architecture.
+   - **Output Leak Prevention**: Guarantees internal database credentials or environment variables are never returned in model outputs.
+
+3. **Automated Evaluations (Evals) Suite**:
+   - **16 Golden Benchmark Test Cases**: Spans `rag_faithfulness`, `pricing_accuracy`, `guardrail_defense`, and `product_catalog`.
+   - **Quantitative Metrics**: Measures Faithfulness %, Relevance %, Pricing Exactness %, Guardrail Defense Rate (100%), and Overall Health rating (`EXCELLENT`).
+
+4. **Frontend Integration**:
+   - **Floating AI Widget**: Persistent bottom-right drawer with one-click prompt suggestions across every page.
+   - **AI Assistant Control Center (`/assistant`)**: Full 3-tab dashboard:
+     - `💬 Assistant & RAG`: Live conversation with Chroma DB RAG status.
+     - `🛡️ Guardrails Hub`: Policy cards, interactive test console with adversarial attack presets, risk score gauges, and redacted text previews.
+     - `📊 Evals & Benchmarks`: One-click evaluation suite runner, summary scorecard metrics, and test case matrix.
+
+### Quick Commands:
+
+```bash
+# Start AI Assistant service locally
+cd services/ai-assistant-service
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8088 --reload
+
+# Run all 21 automated tests (100% pass)
+python -m pytest tests/ -v
+
+# Run comprehensive endpoint verification script
+python scripts/verify_endpoints.py
+```
+
+### AI Assistant REST API Endpoints:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Microservice health check & Chroma DB RAG status |
+| `POST` | `/assistant/chat` | Main conversational endpoint with Guardrail pre-flight & RAG |
+| `POST` | `/assistant/guardrails/check` | Real-time text scanner for injections, PII, and domain scope |
+| `GET` | `/assistant/guardrails/policies` | Active guardrail rules, severity levels, and actions |
+| `POST` | `/assistant/evals/run` | Execute the automated golden benchmark evaluation suite |
+| `GET` | `/assistant/evals/results` | Retrieve the latest cached evaluation scorecard |
+| `GET` | `/assistant/evals/dataset` | Retrieve the 16 golden test cases |
+| `GET` | `/assistant/rag/status` | Chroma DB connection status, collection name, document count |
+| `POST` | `/assistant/rag/query` | Direct semantic search query into Chroma DB vector store |
+| `POST` | `/assistant/pricing/calculate` | Direct programmatic pricing quote calculator |
+

@@ -196,7 +196,54 @@ services:
         condition: service_started
 
   # ==========================================================
-  # Service 8: Frontend (React + Vite + Nginx Reverse Proxy)
+  # Service 8: Chroma DB (Vector Database for RAG)
+  # ==========================================================
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: microservices-chromadb
+    restart: unless-stopped
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSISTENCE_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=FALSE
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    networks:
+      - microservices-net
+
+  # ==========================================================
+  # Service 9: AI Assistant Service (Python + FastAPI + OpenAI + RAG)
+  # ==========================================================
+  ai-assistant-service:
+    build:
+      context: ./services/ai-assistant-service
+      dockerfile: Dockerfile
+    container_name: microservices-ai-assistant
+    restart: unless-stopped
+    env_file:
+      - .env.openai
+    environment:
+      CATALOG_URL: http://catalog-service:8082
+      INVENTORY_URL: http://inventory-service:8083
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      PORT: 8088
+    ports:
+      - "8088:8088"
+    networks:
+      - microservices-net
+    depends_on:
+      catalog-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      chromadb:
+        condition: service_started
+
+  # ==========================================================
+  # Service 10: Frontend (React + Vite + Nginx Reverse Proxy)
   # ==========================================================
   frontend:
     build:
@@ -223,6 +270,8 @@ services:
         condition: service_started
       analytics-service:
         condition: service_started
+      ai-assistant-service:
+        condition: service_started
 
 networks:
   microservices-net:
@@ -230,3 +279,4 @@ networks:
 
 volumes:
   postgres_data:
+  chroma_data:

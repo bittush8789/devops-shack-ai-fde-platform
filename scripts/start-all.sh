@@ -447,6 +447,22 @@ wait_for_service \
     "http://127.0.0.1:8087/health"
 
 # ==================================================
+# Start AI Assistant Service (Python + FastAPI + RAG)
+# ==================================================
+
+start_service \
+    "ai-assistant" \
+    "AI Assistant Service" \
+    "cd '$ROOT_DIR/services/ai-assistant-service' &&
+     exec uvicorn app.main:app --host 0.0.0.0 --port 8088" \
+    "http://127.0.0.1:8088/health"
+
+wait_for_service \
+    "ai-assistant" \
+    "AI Assistant Service" \
+    "http://127.0.0.1:8088/health"
+
+# ==================================================
 # Start React
 # ==================================================
 
@@ -508,6 +524,7 @@ declare -A SERVICES=(
     ["Payment"]="8085"
     ["Notification"]="8086"
     ["Analytics"]="8087"
+    ["AI-Assistant"]="8088"
 )
 
 for NAME in \
@@ -517,7 +534,8 @@ for NAME in \
     Order \
     Payment \
     Notification \
-    Analytics
+    Analytics \
+    AI-Assistant
 do
 
     PORT="${SERVICES[$NAME]}"

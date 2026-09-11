@@ -62,6 +62,7 @@ stop_service() {
 echo
 
 stop_service "frontend" "React Frontend"
+stop_service "ai-assistant" "AI Assistant Service"
 stop_service "analytics" "Analytics Service"
 stop_service "payment" "Payment Service"
 stop_service "order" "Order Service"

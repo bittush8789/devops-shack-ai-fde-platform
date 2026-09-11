@@ -1,5 +1,7 @@
 import React, {useEffect, useMemo, useState} from "react";
 import {request, URLs} from "./api.js";
+import AIWidget from "./AIWidget.jsx";
+import AssistantView from "./AssistantView.jsx";
 
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 
@@ -106,11 +108,14 @@ export default function App() {
     loadAll();
   },[user]);
 
-  if(!user) return <Login onLogin={(u,t)=>{
-    localStorage.setItem("poly_user",JSON.stringify(u));
-    localStorage.setItem("poly_token",t);
-    setUser(u);
-  }}/>;
+  if(!user) return <>
+    <Login onLogin={(u,t)=>{
+      localStorage.setItem("poly_user",JSON.stringify(u));
+      localStorage.setItem("poly_token",t);
+      setUser(u);
+    }}/>
+    <AIWidget />
+  </>;
 
   const addCart=(p)=> {
     setCart(c=>{
@@ -202,14 +207,15 @@ export default function App() {
   const nav=[
     ["overview","◈","Overview"],["catalog","◫","Catalog"],["orders","◎","Orders & Cart"],
     ["inventory","▦","Inventory"],["payments","◇","Payments"],
-    ["notifications","◌",`Notifications ${unread?`(${unread})`:""}`],["analytics","⌁","Analytics"]
+    ["notifications","◌",`Notifications ${unread?`(${unread})`:""}`],["analytics","⌁","Analytics"],
+    ["assistant","🤖","AI Assistant"]
   ];
 
   return <div className="shell">
     <aside>
       <div className="brand"><b>DS</b><div><strong>Polyglot Commerce</strong><small>DevOps Shack</small></div></div>
       <nav>{nav.map(([k,i,l])=><button key={k} className={tab===k?"active":""} onClick={()=>setTab(k)}><span>{i}</span>{l}</button>)}</nav>
-      <div className="stack"><span className="eyebrow">7 LANGUAGES</span><p>Java · Go · Node.js · Python · C# · Ruby · PHP</p><small>● All local, no Docker required</small></div>
+      <div className="stack"><span className="eyebrow">POLYGLOT + AI MESH</span><p>Java · Go · Node.js · Python · C# · Ruby · PHP · Vector DB</p><small>● All local, no Docker required</small></div>
     </aside>
 
     <main>
@@ -229,7 +235,7 @@ export default function App() {
         <section className="hero card">
           <div><Pill tone="blue">POLYGLOT MICROSERVICES</Pill><h2>Seven independent backends.<br/>One seamless product.</h2>
           <p>Every backend owns its data and communicates over REST. Run the entire platform directly on your machine.</p>
-          <div className="actions"><button className="primary" onClick={()=>setTab("catalog")}>Browse products →</button><button className="secondary" onClick={()=>setTab("analytics")}>View analytics</button></div></div>
+          <div className="actions"><button className="primary" onClick={()=>setTab("catalog")}>Browse products →</button><button className="secondary" onClick={()=>setTab("assistant")}>Ask AI Assistant</button></div></div>
           <div className="orb"><b>REST</b>{["Java","Go","Node","Python","C#","Ruby","PHP"].map((x,i)=><span key={x} style={{"--i":i}}>{x}</span>)}</div>
         </section>
 
@@ -246,7 +252,7 @@ export default function App() {
           </Panel>
           <Panel title="Service map" eyebrow="HEALTH">
             <div className="services">
-              {[["Auth","Java",8081],["Catalog","Go",8082],["Inventory","Node",8083],["Orders","Python",8084],["Payments","C#",8085],["Notify","Ruby",8086],["Analytics","PHP",8087]]
+              {[["Auth","Java",8081],["Catalog","Go",8082],["Inventory","Node",8083],["Orders","Python",8084],["Payments","C#",8085],["Notify","Ruby",8086],["Analytics","PHP",8087],["AI Assistant","Python",8088],["Chroma DB","Vector",8000]]
               .map(([n,l,p])=><div key={n}><i/><strong>{n}</strong><span>{l}</span><code>:{p}</code></div>)}
             </div>
           </Panel>
@@ -318,7 +324,10 @@ export default function App() {
           </Panel>
         </div>
       </>}
+
+      {tab==="assistant"&&<AssistantView />}
     </main>
+    <AIWidget />
   </div>;
 }
 
