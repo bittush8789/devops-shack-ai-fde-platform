@@ -1,0 +1,232 @@
+services:
+  # ==========================================================
+  # Database: PostgreSQL with automatic 7-database bootstrap
+  # ==========================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: microservices-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: postgres
+    volumes:
+      - ./database/bootstrap.sql:/docker-entrypoint-initdb.d/01-bootstrap.sql:ro
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - microservices-net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U microapp -d auth_db && pg_isready -U microapp -d catalog_db && pg_isready -U microapp -d inventory_db && pg_isready -U microapp -d order_db && pg_isready -U microapp -d payment_db && pg_isready -U microapp -d notification_db && pg_isready -U microapp -d analytics_db"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ==========================================================
+  # Service 1: Auth Service (Java 21 + Spring Boot)
+  # ==========================================================
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: microservices-auth
+    restart: unless-stopped
+    environment:
+      AUTH_DB_URL: jdbc:postgresql://postgres:5432/auth_db
+      DB_USER: microapp
+      DB_PASSWORD: microapp123
+    ports:
+      - "8081:8081"
+    networks:
+      - microservices-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ==========================================================
+  # Service 2: Catalog Service (Go)
+  # ==========================================================
+  catalog-service:
+    build:
+      context: ./services/catalog-service
+      dockerfile: Dockerfile
+    container_name: microservices-catalog
+    restart: unless-stopped
+    environment:
+      CATALOG_DB_DSN: postgres://microapp:microapp123@postgres:5432/catalog_db?sslmode=disable
+    ports:
+      - "8082:8082"
+    networks:
+      - microservices-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ==========================================================
+  # Service 3: Inventory Service (Node.js + Express)
+  # ==========================================================
+  inventory-service:
+    build:
+      context: ./services/inventory-service
+      dockerfile: Dockerfile
+    container_name: microservices-inventory
+    restart: unless-stopped
+    environment:
+      INVENTORY_DB_URL: postgres://microapp:microapp123@postgres:5432/inventory_db
+    ports:
+      - "8083:8083"
+    networks:
+      - microservices-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ==========================================================
+  # Service 4: Notification Service (Ruby + Sinatra)
+  # ==========================================================
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: microservices-notification
+    restart: unless-stopped
+    environment:
+      NOTIFICATION_DB_URL: postgres://microapp:microapp123@postgres:5432/notification_db
+    ports:
+      - "8086:8086"
+    networks:
+      - microservices-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ==========================================================
+  # Service 5: Order Service (Python + FastAPI)
+  # ==========================================================
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    container_name: microservices-order
+    restart: unless-stopped
+    environment:
+      ORDER_DB_DSN: dbname=order_db user=microapp password=microapp123 host=postgres port=5432
+      CATALOG_URL: http://catalog-service:8082
+      INVENTORY_URL: http://inventory-service:8083
+      NOTIFICATION_URL: http://notification-service:8086
+    ports:
+      - "8084:8084"
+    networks:
+      - microservices-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+
+  # ==========================================================
+  # Service 6: Payment Service (C# / .NET 8)
+  # ==========================================================
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: microservices-payment
+    restart: unless-stopped
+    environment:
+      PAYMENT_DB_URL: Host=postgres;Port=5432;Database=payment_db;Username=microapp;Password=microapp123
+      ORDER_URL: http://order-service:8084
+      INVENTORY_URL: http://inventory-service:8083
+      NOTIFICATION_URL: http://notification-service:8086
+    ports:
+      - "8085:8085"
+    networks:
+      - microservices-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      order-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+
+  # ==========================================================
+  # Service 7: Analytics Service (PHP)
+  # ==========================================================
+  analytics-service:
+    build:
+      context: ./services/analytics-service
+      dockerfile: Dockerfile
+    container_name: microservices-analytics
+    restart: unless-stopped
+    environment:
+      ANALYTICS_DB_DSN: pgsql:host=postgres;port=5432;dbname=analytics_db
+      DB_USER: microapp
+      DB_PASSWORD: microapp123
+      CATALOG_URL: http://catalog-service:8082
+      INVENTORY_URL: http://inventory-service:8083
+      ORDER_URL: http://order-service:8084
+      PAYMENT_URL: http://payment-service:8085
+    ports:
+      - "8087:8087"
+    networks:
+      - microservices-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+
+  # ==========================================================
+  # Service 8: Frontend (React + Vite + Nginx Reverse Proxy)
+  # ==========================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: microservices-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    networks:
+      - microservices-net
+    depends_on:
+      auth-service:
+        condition: service_started
+      catalog-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      analytics-service:
+        condition: service_started
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

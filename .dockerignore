@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Documentation & scripts
+docs/
+logs/
+*.log
+*.pid
+
+# Node / Frontend
+node_modules/
+dist/
+.npm
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Java / Maven
+target/
+.mvn/
+
+# .NET
+bin/
+obj/
+
+# Ruby
+.bundle/
+vendor/bundle/
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

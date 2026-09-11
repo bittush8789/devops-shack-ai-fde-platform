@@ -1,6 +1,49 @@
 # DevOps Shack Polyglot Microservices Lab
 
-A complete **7-microservice**, multi-language application that runs locally **without Docker**.
+A complete **7-microservice**, multi-language application that can be run either **with Docker Compose** (recommended) or locally without Docker.
+
+## 🚀 Run with Docker Compose (Quick Start)
+
+To build and run all 7 microservices, PostgreSQL with all 7 databases, and the React frontend in a single command:
+
+```bash
+docker compose up --build
+```
+
+To run in the background (detached mode):
+
+```bash
+docker compose up -d --build
+```
+
+### Accessing the Application
+
+- **React Web UI**: [http://localhost:5173](http://localhost:5173)
+- **Order Service Swagger Docs**: [http://localhost:8084/docs](http://localhost:8084/docs)
+
+### Individual Health Endpoints
+
+- **Auth Service** (Java): [http://localhost:8081/health](http://localhost:8081/health)
+- **Catalog Service** (Go): [http://localhost:8082/health](http://localhost:8082/health)
+- **Inventory Service** (Node): [http://localhost:8083/health](http://localhost:8083/health)
+- **Order Service** (Python): [http://localhost:8084/health](http://localhost:8084/health)
+- **Payment Service** (.NET): [http://localhost:8085/health](http://localhost:8085/health)
+- **Notification Service** (Ruby): [http://localhost:8086/health](http://localhost:8086/health)
+- **Analytics Service** (PHP): [http://localhost:8087/health](http://localhost:8087/health)
+
+### Stopping the Application
+
+```bash
+docker compose down
+```
+
+To stop and wipe database volumes for a clean reset:
+
+```bash
+docker compose down -v
+```
+
+---
 
 ## Architecture
 
